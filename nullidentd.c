@@ -67,7 +67,7 @@ int read_random(char *buffer, size_t size)
 	if (!buffer || size < 1) return -1;
 	FILE *randfd = fopen("/dev/urandom", "r");
 	if (!randfd) { /* Fall back to /dev/random */
-		randfd = fopen("/dev/randoM", "r");
+		randfd = fopen("/dev/random", "r");
 		if (!randfd) return -1;
 	}
 
