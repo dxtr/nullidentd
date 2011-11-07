@@ -1,0 +1,79 @@
+nullidentd
+----------
+
+Version 1.0
+Copyright 1999 Brian Young <bayoung@acm.org>
+
+Modified 2011 by dxtr
+
+What
+----
+
+nullidentd is intended to be a bare minimum identd server.
+
+The program implements the auth protocol from RFC 1413.  This protocol is
+used to identify active TCP connections.  It depends on the trustworthiness
+of the server and as such is completely useless as a method of
+identification.  Unfortunately some applications still require that an identd
+server is available to query about incoming connections.  nullidentd
+implements the absolute minimum server to allow these applications to
+function.  It returns a fake response for any request.
+
+Note that a similar effect to nullidentd can be acheived by rejecting
+connections to the auth port.  Servers usually don't require a response.
+
+Under Linux kernel version 2.0.x the following command accomplishes this:
+
+ipfwadm -I -a reject -P tcp -y -D 0/0 auth
+
+For kernel version 2.2.x the ipchains command is:
+
+ipchains -A input -j REJECT -p tcp -y -d 0/0 auth
+
+The auth port is tcp 113.
+
+
+Goals
+-----
+
+When I determined that I needed to run an identd server on my server I looked
+for the simplest identd server I could find.  I didn't find one as simple as
+I wanted.
+
+nullidentd is a single source file less than 150 lines long.  It is intended
+to be so simple that it is probably bug free.  It can certainly be
+understood in its entirety with no difficulty.  It should also be somewhat
+immune to denial of service attacks by following strict timeouts on idle
+clients.
+
+Installation
+------------
+
+Build the program by simply typing 'make'.  Edit the makefile if it's
+required.  There is a 'make install' rule, but you may want to edit the
+makefile to set the installation directory.
+
+nullidentd has been built and tested on a Linux 2.2 system.  Portability
+fixes are welcomed.
+
+nullidentd must be run from inetd.  I have the following line in my
+inetd.conf:
+
+auth   stream  tcp     nowait    nobody    /usr/local/sbin/nullidentd nullidentd
+
+There's only one (optional) parameter, it specifies what userid the identd
+server will return as a response.  The default userid is 'foobar'.  Note that
+no validation is attempted on the port numbers of the request.
+
+Rant
+----
+
+If you write or maintain any application that requires or even uses identd
+PLEASE STOP.  The protocol is completely untrustworthy and as such is useless
+for purposes of identification.
+
+If an application really requires identification of users it should have a
+more secure means, e.g. passwords.  If the application doesn't require this
+level of identification then it implicitly allows anonymous clients, hence
+the userid of a client is not needed.
+
