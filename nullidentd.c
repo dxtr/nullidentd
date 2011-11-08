@@ -7,9 +7,6 @@
 
 #define SESSION_TIMEOUT 20
 
-#define MAX_RESPONSE 200
-#define MAX_REQUEST 100
-
 int write_response( int fd, char *response, int len )
 {
 	int		retval;
@@ -62,20 +59,20 @@ int read_request( int fd, char *request, int maxlen )
 
 int read_random(char *buffer, size_t size)
 {
-	int data_read=0;
 	char *p = buffer;
-	if (!buffer || size < 1) return -1;
+	int data_read=0;
+	if (!buffer || size < 2) return -1;
 	FILE *randfd = fopen("/dev/urandom", "r");
 	if (!randfd) { /* Fall back to /dev/random */
 		randfd = fopen("/dev/random", "r");
 		if (!randfd) return -1;
 	}
-
-	for (size_t i = 0; i < size/2; i++) {
+	while (strlen(buffer) < size) {
 		int c = fgetc(randfd);
 		if (ferror(randfd) != 0 || feof(randfd) != 0) { break; }
+		if (c < 1) continue;
 
-		sprintf(p, "%x", c);
+		sprintf(p, "%02x", c);
 		p += 2;
 	}
 
@@ -96,8 +93,8 @@ int main( int argc, const char *argv[] )
 	int			infd;
 	int			outfd;
 	int			response_len;
-	char		response[MAX_RESPONSE];
-	char		request[MAX_REQUEST];
+	char		response[256];
+	char		request[129];
 	char data[9];
 
 	if( getgid() == 0 ) {
@@ -117,18 +114,18 @@ int main( int argc, const char *argv[] )
 	alarm( SESSION_TIMEOUT );
 
 	for( ;; ) {
+		memset(response, 0, sizeof(response));
+		memset(request, 0, sizeof(request));
+		memset(data, 0, sizeof(data));
 		/* read the request */
-		if( !read_request( infd, request, MAX_REQUEST ) ) {
+		if(!read_request(infd, request, sizeof(request))) {
 			/* error or timed out */
 			goto done;
 		}
 
 		/* format the response */
-		memset(data, 0, sizeof(data));
 		read_random(data, 8);
-		
 		response_len = snprintf( response, sizeof( response ), "%.20s : USERID : UNIX : %.20s\r\n", request, data );
-
 		/* send the line */
 		if( !write_response( outfd, response, response_len ) ) {
 			goto done;
